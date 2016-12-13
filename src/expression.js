@@ -433,7 +433,8 @@ Helper.prototype.value = function(scope, helperOptions, nodeList, truthyRenderer
 // AT @NAME
 //
 var keyRegExp = /[\w\.\\\-_@\/\&%]+/,
-	tokensRegExp = /('.*?'|".*?"|=|[\w\.\\\-_@\/*%\$]+|[\(\)]|,|\~|\[|\]|\s*(?=\[))/g,
+	tokensRegExp = /('.*?'|".*?"|=|[\w\.\\\-_@\/*%\$]+|[\(\)]|,|\~|\[|\]\s*|\s*(?=\[))/g,
+	bracketSpaceRegExp = /\]\s+/,
 	literalRegExp = /^('.*?'|".*?"|[0-9]+\.?[0-9]*|true|false|null|undefined)$/;
 
 var isTokenKey = function(token){
@@ -595,7 +596,12 @@ var expression = {
 	tokenize: function(expression){
 		var tokens = [];
 		(expression.trim() + ' ').replace(tokensRegExp, function (whole, arg) {
-			tokens.push(arg);
+			if (bracketSpaceRegExp.test(arg)) {
+				tokens.push(arg.slice(0, 1));
+				tokens.push(arg.slice(1));
+			} else {
+				tokens.push(arg);
+			}
 		});
 		return tokens;
 	},
@@ -781,13 +787,22 @@ var expression = {
 						key: token.slice(1) // remove leading `.`
 					});
 				}
-				else if(firstParent.type === 'Bracket' && !(firstParent.children && firstParent.children.length > 0)) {
-					stack.addTo(["Bracket"], {type: "Lookup", key: token});
-				}
-				// This is to make sure in a helper like `helper foo[bar] car` that
-				// car would not be added to the Bracket expression.
-				else if(stack.first(["Helper", "Call", "Hash","Arg"]).type === 'Helper') {
-					stack.addToAndPush(["Helper"], {type: "Lookup", key: token});
+				else if(firstParent.type === 'Bracket') {
+					if (!(firstParent.children && firstParent.children.length > 0)) {
+						stack.addTo(["Bracket"], {type: "Lookup", key: token});
+					} else {
+						// This is to make sure in a helper like `helper foo[bar] car` that
+						// car would not be added to the Bracket expression.
+						if(stack.first(["Helper", "Call", "Hash", "Arg"]).type === 'Helper') {
+							stack.addToAndPush(["Helper"], {type: "Lookup", key: token});
+						} else {
+							stack.replaceTopAndPush({
+								type: "Lookup",
+								key: token.slice(1),
+								root: firstParent
+							});
+						}
+					}
 				}
 				else {
 					// if two scopes, that means a helper

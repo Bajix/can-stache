@@ -5292,6 +5292,35 @@ function makeTest(name, doc, mutation) {
 		equal(innerHTML(p[0]), 'Phillips', 'updated value for baz in foo[bar][baz]');
 	});
 
+	test("Bracket expression followed by Lookup expression", function () {
+		var template;
+		var div = doc.createElement('div');
+
+		template = stache("<p>{{ foo[bar].first }}</p>");
+
+		var data = new CanMap({
+			baz: 'first',
+			bar: 'name',
+			foo: {
+				name: {
+					first: 'K'
+				},
+				fullName: {
+					first: 'Kevin'
+				}
+			}
+		});
+		var dom = template(data);
+		div.appendChild(dom);
+		var p = div.getElementsByTagName('p');
+
+		equal(innerHTML(p[0]), 'K', 'correct value for foo[bar].first');
+
+		data.attr('bar', 'fullName');
+
+		equal(innerHTML(p[0]), 'Kevin', 'updated value for foo[bar].first');
+	});
+
 	// PUT NEW TESTS RIGHT BEFORE THIS!
 
 }

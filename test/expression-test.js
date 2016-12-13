@@ -29,7 +29,7 @@ test("expression.tokenize", function(){
 
 	var bracket = "[foo] bar [baz]";
 	res = expression.tokenize(bracket);
-	deepEqual(res, ["[", "foo", "]", "bar", " ", "[", "baz", "]"]);
+	deepEqual(res, ["[", "foo", "]", " ", "bar", " ", "[", "baz", "]", " "]);
 
 });
 
@@ -334,30 +334,30 @@ test("expression.ast - [] operator", function(){
 	deepEqual(expression.ast("['propName']"), {
 		type: "Bracket",
 		children: [{type: "Literal", value: "propName"}]
-	});
+	}, "['propName']");
 
 	deepEqual(expression.ast("[propName]"), {
     	type: "Bracket",
     	children: [{type: "Lookup", key: "propName"}]
-	});
+	}, "[propName]");
 
 	deepEqual(expression.ast("foo['bar']"), {
 	    type: "Bracket",
 			root: {type: "Lookup", key: "foo"},
 	    children: [{type: "Literal", value: "bar"}]
-	});
+	}, "foo['bar']");
 
 	deepEqual(expression.ast("foo[bar]"), {
 	    type: "Bracket",
 			root: {type: "Lookup", key: "foo"},
 	    children: [{type: "Lookup", key: "bar"}]
-	});
+	}, "foo[bar]");
 
 	deepEqual(expression.ast("foo()[bar]"), {
 		type: "Bracket",
 		root: {type: "Call", method: {key: "@foo", type: "Lookup" } },
 		children: [{type: "Lookup", key: "bar"}]
-	});
+	}, "foo()[bar]");
 
 	deepEqual(expression.ast("foo [bar]"), {
 		type: "Helper",
@@ -369,7 +369,7 @@ test("expression.ast - [] operator", function(){
 			type: "Bracket",
 			children: [{type: "Lookup", key: "bar"}]
 		}]
-	});
+	}, "foo [bar]");
 
 	deepEqual(expression.ast("eq foo['bar'] 'foo'"), {
 		type: "Helper",
@@ -386,7 +386,7 @@ test("expression.ast - [] operator", function(){
 			type: "Literal",
 			value: "foo"
 		}]
-	});
+	}, "eq foo['bar'] 'foo'");
 
 	deepEqual(expression.ast("eq foo[bar] foo"), {
 		type: "Helper",
@@ -403,7 +403,7 @@ test("expression.ast - [] operator", function(){
 			type: "Lookup",
 			key: "foo"
 		}]
-	});
+	}, "eq foo[bar] foo");
 
 	deepEqual(expression.ast("foo[bar][baz]"), {
 		type: "Bracket",
@@ -413,42 +413,51 @@ test("expression.ast - [] operator", function(){
 				children: [{type: "Lookup", key: "bar"}]
 		},
 		children: [{type: "Lookup", key: "baz"}]
-	});
+	}, "foo[bar][baz]");
+
+	deepEqual(expression.ast("foo[bar].baz"), {
+		type: "Lookup",
+		key: "baz",
+		root: {
+			type: "Bracket",
+			root: {type: "Lookup", key: "foo"},
+			children: [{type: "Lookup", key: "bar"}]
+		}
+	}, "foo[bar].baz");
 });
 
 test("expression.parse - [] operator", function(){
-	var exprData = expression.parse("['propName']");
-	deepEqual(exprData,
+	deepEqual(expression.parse("['propName']"),
 		new expression.Bracket(
 			new expression.Literal('propName')
-		)
+		),
+		"['propName']"
 	);
 
-	exprData = expression.parse("[propName]");
-	deepEqual(exprData,
+	deepEqual(expression.parse("[propName]"),
 		new expression.Bracket(
 			new expression.Lookup('propName')
-		)
+		),
+		"[propName]"
 	);
 
-	exprData = expression.parse("foo['bar']");
-	deepEqual(exprData,
+	deepEqual(expression.parse("foo['bar']"),
 		new expression.Bracket(
 			new expression.Literal('bar'),
 			new expression.Lookup('foo')
-		)
+		),
+		"foo['bar']"
 	);
 
-	exprData = expression.parse("foo[bar]");
-	deepEqual(exprData,
+	deepEqual(expression.parse("foo[bar]"),
 		new expression.Bracket(
 			new expression.Lookup('bar'),
 			new expression.Lookup('foo')
-		)
+		),
+		"foo[bar]"
 	);
 
-	exprData = expression.parse("foo()[bar]");
-	deepEqual(exprData,
+	deepEqual(expression.parse("foo()[bar]"),
 		new expression.Bracket(
 			new expression.Lookup('bar'),
 			new expression.Call(
@@ -456,7 +465,8 @@ test("expression.parse - [] operator", function(){
 				[],
 				{}
 			)
-		)
+		),
+		"foo()[bar]"
 	);
 });
 
